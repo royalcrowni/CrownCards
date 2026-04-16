@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CrownCards</title>
+<link rel="icon" href="IgCard_Fav.png" type="image/png">
+<style>
+*, *::before, *::after {
+  margin:0; padding:0; box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-touch-callout:none;
+  user-select:none; -webkit-user-select:none;
+}
+:root {
+  --cw:46px; --ch:64px; --gap:6px;
+  --pd:16px; --pu:28px; --fan:14px; --r:6px;
+}
+
+/* Full-page felt (grain via JS) */
+html { width:100%; height:100%; background:#5a1010; }
+
+body {
+  width:100%; height:100%; height:100dvh;
+  display:flex; flex-direction:column;
+  background:transparent;
+  font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+  overflow:hidden;
+}
+
+/* ── HEADER — full screen width ──────────────────── */
+#hdr {
+  flex-shrink:0;
+  width:100%;
+  background:rgba(0,0,0,0.62);
+  color:#fff;
+  display:flex; align-items:center;
+  padding:7px 16px;
+  gap:10px;
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  backdrop-filter:blur(6px);
+}
+#hdr .king-ico { font-size:20px; flex-shrink:0; }
+#hdr .stats { flex:1; display:flex; justify-content:center; gap:24px; }
+.stat { display:flex; flex-direction:column; align-items:center; }
+.stat-l { font-size:8px; opacity:.5; text-transform:uppercase; letter-spacing:.7px; }
+.stat-v { font-size:15px; font-weight:700; letter-spacing:-.3px; }
+
+/* About button */
+#about-btn {
+  background:none; border:1px solid rgba(255,255,255,0.3);
+  color:rgba(255,255,255,0.75); font-size:9px; font-weight:700;
+  letter-spacing:.8px; padding:4px 8px; border-radius:5px;
+  cursor:pointer; text-transform:uppercase; flex-shrink:0;
+  transition:background .2s;
+}
+#about-btn:hover { background:rgba(255,255,255,0.1); }
+
+/* ── GAME WRAPPER — felt fills sides, content centered ── */
+#game-wrap {
+  flex:1; display:flex; justify-content:center;
+  overflow:hidden; touch-action:none; position:relative;
+}
+#game-inner {
+  width:100%; max-width:540px;
+  display:flex; flex-direction:column;
+  padding:7px 7px 5px; gap:7px; overflow:hidden;
+}
+
+/* ── BOTTOM BAR — full screen width ─────────────── */
+#btm {
+  flex-shrink:0; width:100%;
+  background:rgba(0,0,0,0.55);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 20px;
+  backdrop-filter:blur(6px);
+}
+.gbtn {
+  background:none; border:none; color:rgba(255,255,255,0.88);
+  font-size:13px; font-weight:700; letter-spacing:.3px;
+  display:flex; align-items:center; gap:6px;
+  padding:8px 12px; border-radius:8px;
+  cursor:pointer; text-transform:uppercase;
+}
+.gbtn:active { background:rgba(255,255,255,0.12); }
+
+/* ── Top row ─────────────────────────────────────── */
+#top-row {
+  display:flex; align-items:flex-start;
+  gap:var(--gap); flex-shrink:0;
+}
+#spacer { flex:1; min-width:4px; }
+#foundations { display:flex; gap:var(--gap); }
+
+/* ── Slot placeholder ────────────────────────────── */
+.slot {
+  width:var(--cw); height:var(--ch);
+  border-radius:var(--r);
+  border:1.5px dashed rgba(255,255,255,0.2);
+  background:rgba(0,0,0,0.18);
+  display:flex; align-items:center; justify-content:center;
+  font-size:calc(var(--cw)*0.42); color:rgba(255,255,255,0.22);
+  position:relative; flex-shrink:0; cursor:pointer;
+}
+#waste-slot {
+  min-width:var(--cw); height:var(--ch);
+  border-radius:var(--r);
+  border:1.5px solid rgba(255,255,255,0.1);
+  background:rgba(0,0,0,0.12);
+  position:relative; flex-shrink:0;
+}
+
+/* ── Tableau ─────────────────────────────────────── */
+#tableau { display:flex; gap:var(--gap); flex:1; align-items:flex-start; }
+.tcol { flex:1; position:relative; min-height:calc(var(--ch) + var(--pu)*6); }
+
+/* ── Cards ───────────────────────────────────────── */
+.card {
+  position:absolute; width:var(--cw); height:var(--ch);
+  border-radius:var(--r); cursor:pointer; touch-action:none;
+}
+.card-face {
+  background:#F7F2E7;
+  box-shadow:0 1px 5px rgba(0,0,0,0.35),0 0 0 .5px rgba(0,0,0,0.06);
+}
+.card-face .ct {
+  position:absolute; top:2px; left:3px;
+  display:flex; flex-direction:column; align-items:center;
+  font-weight:800; line-height:1.05;
+  font-size:calc(var(--cw)*0.24);
+}
+.card-face .cb {
+  position:absolute; bottom:2px; right:3px;
+  display:flex; flex-direction:column; align-items:center;
+  font-weight:800; line-height:1.05;
+  font-size:calc(var(--cw)*0.24); transform:rotate(180deg);
+}
+.card-face .cm {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  font-size:calc(var(--cw)*0.38); line-height:1;
+}
+.r { color:#CC1111; }
+.b { color:#151515; }
+
+/* Face-down */
+.card-back { background:url('../CartasSVG.svg') center/100% 100% no-repeat; box-shadow:0 1px 5px rgba(0,0,0,0.45); overflow:hidden; }
+
+/* Selected highlight */
+.card.sel {
+  box-shadow:0 0 0 2.5px #FFD700,0 4px 16px rgba(0,0,0,0.5) !important;
+  transform:translateY(-4px); z-index:200 !important;
+}
+
+/* ── Ghost (GPU-accelerated) ─────────────────────── */
+#ghost {
+  position:fixed; left:0; top:0;
+  pointer-events:none; z-index:9999; display:none;
+  will-change:transform; transform:translate3d(0,0,0);
+}
+#ghost .card { position:absolute; left:0; }
+
+/* ── ABOUT popup ─────────────────────────────────── */
+#about-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.55); z-index:20000;
+  align-items:center; justify-content:center;
+}
+#about-overlay.on { display:flex; }
+.about-box {
+  background:#F7F2E7;
+  border-radius:16px; padding:36px 32px 28px;
+  text-align:center; max-width:280px; width:88%;
+  box-shadow:0 24px 60px rgba(0,0,0,0.35);
+  position:relative;
+}
+.about-box .close-x {
+  position:absolute; top:12px; right:14px;
+  background:none; border:none; font-size:20px;
+  color:#aaa; cursor:pointer; line-height:1;
+}
+.about-box p {
+  font-size:12px; color:#444; line-height:1.7;
+  font-family:-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+}
+.about-brand {
+  font-weight:800; font-size:16px;
+  background:linear-gradient(90deg,
+    #D91E38 0%, #D91E38 20%,
+    #ff6b6b 40%, #fff0f0 50%,
+    #ff6b6b 60%, #D91E38 80%, #D91E38 100%
+  );
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shimmer 2.4s linear infinite;
+  cursor:pointer; text-decoration:none; display:inline-block;
+}
+@keyframes shimmer {
+  0%   { background-position:200% center; }
+  100% { background-position:-200% center; }
+}
+
+/* ── Win overlay ─────────────────────────────────── */
+#win-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.74); z-index:10000;
+  align-items:center; justify-content:center;
+}
+#win-overlay.on { display:flex; }
+.winbox {
+  background:#F7F2E7; border-radius:20px; padding:38px 28px 30px;
+  text-align:center; max-width:300px; width:88%;
+  box-shadow:0 28px 70px rgba(0,0,0,0.45);
+}
+.winbox .trophy { font-size:52px; display:block; margin-bottom:8px; }
+.winbox h2 { font-size:28px; color:#222; margin-bottom:6px; }
+.winbox p { color:#777; font-size:14px; margin-bottom:24px; line-height:1.5; }
+.winbox .play-btn {
+  background:#D91E38; color:#fff; border:none; border-radius:10px;
+  padding:14px 0; font-size:16px; font-weight:700; width:100%; cursor:pointer;
+}
+
+/* ── Confetti ────────────────────────────────────── */
+.cf {
+  position:fixed; border-radius:2px; pointer-events:none; z-index:9998;
+  animation:cffall linear forwards;
+}
+@keyframes cffall {
+  0%   { transform:translateY(-20px) rotate(0deg); opacity:1; }
+  100% { transform:translateY(110vh)  rotate(800deg); opacity:0; }
+}
+
+</style>
+</head>
+<body>
+
+<!-- FULL-WIDTH HEADER -->
+<div id="hdr">
+  <img src="CrownCards_Logo.svg" alt="CrownCards" style="height:26px;flex-shrink:0;">
+  <div class="stats">
+    <div class="stat"><span class="stat-l">Tiempo</span><span class="stat-v" id="sv-t">0:00</span></div>
+    <div class="stat"><span class="stat-l">Puntuación</span><span class="stat-v" id="sv-s">0</span></div>
+    <div class="stat"><span class="stat-l">Movimientos</span><span class="stat-v" id="sv-m">0</span></div>
+  </div>
+  <button id="about-btn">About</button>
+</div>
+
+<!-- GAME AREA (felt shows on sides, content centered) -->
+<div id="game-wrap">
+  <div id="game-inner">
+    <div id="top-row">
+      <div id="stock-slot" class="slot">🂠</div>
+      <div id="waste-slot"></div>
+      <div id="spacer"></div>
+      <div id="foundations">
+        <div class="slot" id="f0">♥</div>
+        <div class="slot" id="f1">♦</div>
+        <div class="slot" id="f2">♣</div>
+        <div class="slot" id="f3">♠</div>
+      </div>
+    </div>
+    <div id="tableau"></div>
+  </div>
+</div>
+
+<!-- FULL-WIDTH FOOTER -->
+<div id="btm">
+  <button class="gbtn" id="undo-btn">↩ Deshacer</button>
+  <button class="gbtn" id="autocomplete-btn" style="display:none;color:#FFD700;letter-spacing:.5px;">⚡ Completar</button>
+  <button class="gbtn" id="new-btn">★ Nueva</button>
+</div>
+
+<!-- Ghost for drag -->
+<div id="ghost"></div>
+
+<!-- ABOUT POPUP -->
+<div id="about-overlay">
+  <div class="about-box">
+    <button class="close-x" id="about-close">✕</button>
+    <p>Developed by<br>
+      <a class="about-brand" href="https://www.manzano.cc" target="_blank" rel="noopener">manzano.cc</a>
+    </p>
+  </div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div id="win-overlay">
+  <div class="winbox">
+    <span class="trophy">🏆</span>
+    <h2>¡Ganaste!</h2>
+    <p id="win-info">Puntuación: 0</p>
+    <button class="play-btn" onclick="newGame()">Nueva Partida</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════
+// FELT GRAIN TEXTURE
+// ═══════════════════════════════════════════════════════
+(function applyFelt() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 256;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#5a1010';
+  ctx.fillRect(0,0,256,256);
+  const id = ctx.getImageData(0,0,256,256);
+  const d  = id.data;
+  for (let i=0; i<d.length; i+=4) {
+    const n=(Math.random()-.5)*28;
+    d[i]  =Math.max(0,Math.min(255,d[i]  +n));
+    d[i+1]=Math.max(0,Math.min(255,d[i+1]+n*.55));
+    d[i+2]=Math.max(0,Math.min(255,d[i+2]+n*.55));
+  }
+  ctx.putImageData(id,0,0);
+  const url=cv.toDataURL('image/png');
+  document.documentElement.style.backgroundImage=`url(${url})`;
+  document.documentElement.style.backgroundRepeat='repeat';
+  document.documentElement.style.backgroundSize='256px 256px';
+})();
+
+// ═══════════════════════════════════════════════════════
+// GAME CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════
+const SUITS=['♥','♦','♣','♠'];
+const RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const isRed=s=>s==='♥'||s==='♦';
+const ri=r=>RANKS.indexOf(r);
+
+let stock,waste,found,tab;
+let score,moveCount,startTime,timerID;
+let hist=[]; let sel=null; let won=false;
+
+// ── Deck ──────────────────────────────────────────────
+function makeDeck(){
+  const d=[];
+  for(const s of SUITS) for(const r of RANKS) d.push({suit:s,rank:r,faceUp:false});
+  return d;
+}
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── History ───────────────────────────────────────────
+const snap=()=>({
+  stock:stock.map(c=>({...c})),waste:waste.map(c=>({...c})),
+  found:found.map(f=>f.map(c=>({...c}))),tab:tab.map(t=>t.map(c=>({...c}))),
+  score,moveCount
+});
+const restore=s=>{stock=s.stock;waste=s.waste;found=s.found;tab=s.tab;score=s.score;moveCount=s.moveCount;};
+const pushHist=()=>{hist.push(snap());if(hist.length>60)hist.shift();};
+
+// ── New game ──────────────────────────────────────────
+function newGame(){
+  won=false;sel=null;hist=[];score=0;moveCount=0;
+  clearInterval(timerID);
+  startTime=Date.now();
+  timerID=setInterval(tickTimer,1000);
+  const deck=shuffle(makeDeck());
+  tab=Array.from({length:7},()=>[]);
+  let idx=0;
+  for(let c=0;c<7;c++)for(let r=0;r<=c;r++)tab[c].push({...deck[idx++],faceUp:r===c});
+  stock=deck.slice(idx).map(c=>({...c,faceUp:false}));
+  waste=[];found=[[],[],[],[]];
+  document.getElementById('win-overlay').classList.remove('on');
+  updateStats();render();
+}
+
+function tickTimer(){
+  const s=((Date.now()-startTime)/1000)|0;
+  document.getElementById('sv-t').textContent=`${(s/60)|0}:${(s%60).toString().padStart(2,'0')}`;
+}
+function updateStats(){
+  document.getElementById('sv-s').textContent=score;
+  document.getElementById('sv-m').textContent=moveCount;
+}
+
+// ── Rules ─────────────────────────────────────────────
+function canFound(card,fi){
+  if(card.suit!==SUITS[fi])return false;
+  const p=found[fi];
+  return p.length===0?card.rank==='A':ri(card.rank)===ri(p[p.length-1].rank)+1;
+}
+function canTab(card,col){
+  const p=tab[col];
+  if(p.length===0)return card.rank==='K';
+  const top=p[p.length-1];
+  return top.faceUp&&isRed(card.suit)!==isRed(top.suit)&&ri(card.rank)===ri(top.rank)-1;
+}
+
+// ── Moves ─────────────────────────────────────────────
+function flipTop(col){
+  const p=tab[col];
+  if(p.length>0&&!p[p.length-1].faceUp){p[p.length-1].faceUp=true;score+=5;updateStats();}
+}
+function removeSrc(src,col,cnt){
+  if(src==='waste')waste.pop();
+  else if(src==='found'){found[col].pop();}
+  else{tab[col].splice(tab[col].length-cnt,cnt);flipTop(col);}
+}
+function moveToFound(cards,src,col,cnt){
+  if(cards.length!==1)return false;
+  const fi=SUITS.indexOf(cards[0].suit);
+  if(!canFound(cards[0],fi))return false;
+  pushHist();removeSrc(src,col,cnt);
+  found[fi].push({...cards[0],faceUp:true});
+  score+=10;moveCount++;updateStats();render();checkWin();return true;
+}
+function moveToTab(cards,src,srcCol,cnt,destCol){
+  if(!canTab(cards[0],destCol))return false;
+  if(src==='tab'&&srcCol===destCol)return false;
+  pushHist();removeSrc(src,srcCol,cnt);
+  for(const c of cards)tab[destCol].push({...c,faceUp:true});
+  score+=src==='waste'?5:src==='found'?-5:3;moveCount++;updateStats();render();return true;
+}
+
+// Auto-move waste top → foundation first, then first valid tableau col
+function autoMoveWaste(){
+  if(!waste.length)return;
+  const card=waste[waste.length-1];
+  if(moveToFound([card],'waste',0,1))return;
+  for(let c=0;c<7;c++){if(moveToTab([card],'waste',0,1,c))return;}
+}
+
+// ── Card element ──────────────────────────────────────
+function cardEl(card,z=0){
+  const d=document.createElement('div');
+  d.className=card.faceUp?'card card-face':'card card-back';
+  d.style.zIndex=z;
+  if(card.faceUp){
+    const cc=isRed(card.suit)?'r':'b';
+    d.innerHTML=
+      `<div class="ct ${cc}"><span>${card.rank}</span><span style="font-size:.82em">${card.suit}</span></div>`+
+      `<div class="cm ${cc}">${card.suit}</div>`+
+      `<div class="cb ${cc}"><span>${card.rank}</span><span style="font-size:.82em">${card.suit}</span></div>`;
+  }
+  return d;
+}
+
+const cssVar=n=>parseInt(getComputedStyle(document.documentElement).getPropertyValue(n));
+
+// ── Render ────────────────────────────────────────────
+function renderStock(){
+  const sl=document.getElementById('stock-slot');
+  sl.innerHTML='';
+  if(stock.length>0){
+    const el=cardEl({faceUp:false},1);
+    el.style.cssText='position:absolute;top:0;left:0;cursor:pointer;';
+    const badge=document.createElement('span');
+    badge.style.cssText='position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;z-index:2;font-weight:800;';
+    badge.textContent=stock.length;
+    el.appendChild(badge);sl.appendChild(el);sl.style.fontSize='0';
+  } else {
+    sl.style.fontSize='calc(var(--cw)*0.48)';
+    sl.innerHTML='<span style="opacity:.5">↺</span>';
+  }
+}
+
+function renderWaste(){
+  const sl=document.getElementById('waste-slot');
+  sl.innerHTML='';
+  const cw=cssVar('--cw'),fan=cssVar('--fan');
+  if(!waste.length){sl.style.width=cw+'px';return;}
+  const startIdx=Math.max(0,waste.length-3);
+  const visible=waste.slice(startIdx);
+  const n=visible.length;
+  sl.style.width=(cw+(n-1)*fan)+'px';
+  visible.forEach((card,i)=>{
+    const isTop=i===n-1;
+    const el=cardEl(card,i+1);
+    el.style.position='absolute';el.style.top='0';el.style.left=(i*fan)+'px';
+    if(isTop){
+      el.dataset.isWasteTop='1';el._cards=[card];
+      el.dataset.src='waste';el.dataset.col='0';el.dataset.cnt='1';
+      el.addEventListener('pointerdown',onPointerDown);
+    } else {
+      el.style.pointerEvents='none';el.style.filter='brightness(0.78)';
+    }
+    sl.appendChild(el);
+  });
+}
+
+function renderFoundations(){
+  for(let i=0;i<4;i++){
+    const sl=document.getElementById('f'+i);
+    sl.innerHTML='';
+    if(found[i].length>0){
+      const el=cardEl(found[i][found[i].length-1],1);
+      el.style.cssText='position:absolute;top:0;left:0;cursor:pointer;';
+      el._cards=[found[i][found[i].length-1]];
+      el.dataset.src='found';el.dataset.col=i;el.dataset.cnt='1';
+      el.addEventListener('pointerdown',onPointerDown);
+      sl.appendChild(el);
+    } else {sl.innerHTML=`<span>${SUITS[i]}</span>`;}
+  }
+}
+
+function renderTableau(){
+  const tbody=document.getElementById('tableau');
+  tbody.innerHTML='';
+  const pu=cssVar('--pu'),pd=cssVar('--pd'),ch=cssVar('--ch');
+  for(let c=0;c<7;c++){
+    const wrap=document.createElement('div');
+    wrap.className='tcol';wrap.dataset.col=c;
+    const empty=document.createElement('div');
+    empty.className='slot';
+    empty.style.cssText='position:absolute;top:0;left:0;z-index:0;border-color:rgba(255,255,255,0.14);';
+    empty.dataset.emptyCol=c;wrap.appendChild(empty);
+    const col=tab[c];
+    let colH=ch;
+    for(let r=0;r<col.length-1;r++)colH+=col[r].faceUp?pu:pd;
+    wrap.style.minHeight=colH+'px';
+    let top=0;
+    for(let r=0;r<col.length;r++){
+      const card=col[r],cntBel=col.length-r;
+      const el=cardEl(card,r+1);
+      el.style.top=top+'px';el.style.left='0';
+      if(card.faceUp){
+        if(sel&&sel.col===c&&sel.cnt===cntBel)el.classList.add('sel');
+        el._cards=col.slice(r);
+        el.dataset.src='tab';el.dataset.col=c;el.dataset.cnt=cntBel;
+        el.addEventListener('pointerdown',onPointerDown);
+      }
+      wrap.appendChild(el);
+      if(r<col.length-1)top+=card.faceUp?pu:pd;
+    }
+    tbody.appendChild(wrap);
+  }
+}
+
+function render(){renderStock();renderWaste();renderFoundations();renderTableau();checkAutoComplete();}
+
+function checkAutoComplete(){
+  const ok=!won&&stock.length===0&&tab.every(col=>col.every(c=>c.faceUp));
+  document.getElementById('autocomplete-btn').style.display=ok?'':'none';
+}
+
+function autoComplete(){
+  function step(){
+    let moved=false;
+    if(waste.length){
+      const c=waste[waste.length-1],fi=SUITS.indexOf(c.suit);
+      if(canFound(c,fi)){waste.pop();found[fi].push({...c,faceUp:true});score+=10;moveCount++;moved=true;}
+    }
+    if(!moved){
+      for(let col=0;col<7;col++){
+        if(!tab[col].length)continue;
+        const c=tab[col][tab[col].length-1],fi=SUITS.indexOf(c.suit);
+        if(canFound(c,fi)){tab[col].pop();found[fi].push({...c,faceUp:true});score+=10;moveCount++;moved=true;break;}
+      }
+    }
+    updateStats();render();
+    if(moved)setTimeout(step,60);else checkWin();
+  }
+  pushHist();step();
+}
+document.getElementById('autocomplete-btn').addEventListener('click',autoComplete);
+
+// ═══════════════════════════════════════════════════════
+// DRAG — GPU-accelerated with RAF, touch-optimized
+// ═══════════════════════════════════════════════════════
+let downInfo=null, rafId=null, ghostTargetX=0, ghostTargetY=0;
+const ghost=document.getElementById('ghost');
+
+function onPointerDown(e){
+  if(e.button!==0&&e.pointerType==='mouse')return;
+  e.preventDefault();e.stopPropagation();
+  const el=e.currentTarget;
+  const r=el.getBoundingClientRect();
+  downInfo={
+    el,
+    src:el.dataset.src, col:parseInt(el.dataset.col), cnt:parseInt(el.dataset.cnt),
+    cards:el._cards||[],
+    startX:e.clientX, startY:e.clientY,
+    offX:e.clientX-r.left, offY:e.clientY-r.top,
+    moved:false, isWasteTop:!!el.dataset.isWasteTop
+  };
+  // Pre-build + pre-position ghost immediately so first move frame has no setup cost
+  buildGhost(downInfo.cards);
+  ghostTargetX=r.left; ghostTargetY=r.top;
+  ghost.style.transform=`translate3d(${ghostTargetX}px,${ghostTargetY}px,0)`;
+  el.setPointerCapture(e.pointerId);
+  el.addEventListener('pointermove',onPointerMove,{passive:false});
+  el.addEventListener('pointerup',onPointerUp);
+  el.addEventListener('pointercancel',onPointerUp);
+}
+
+function buildGhost(cards){
+  ghost.innerHTML='';
+  const pu=cssVar('--pu'),ch=cssVar('--ch'),cw=cssVar('--cw');
+  cards.forEach((c,i)=>{const el=cardEl(c,i);el.style.top=(i*pu)+'px';ghost.appendChild(el);});
+  ghost.style.width=cw+'px';
+  ghost.style.height=(ch+(cards.length-1)*pu)+'px';
+}
+
+function updateGhostPos(){
+  ghost.style.transform=`translate3d(${ghostTargetX}px,${ghostTargetY}px,0)`;
+  rafId=null;
+}
+
+function onPointerMove(e){
+  if(!downInfo)return;
+  e.preventDefault();
+  const dx=e.clientX-downInfo.startX,dy=e.clientY-downInfo.startY;
+  if(!downInfo.moved&&Math.hypot(dx,dy)>6){
+    downInfo.moved=true;
+    ghost.style.display='block';
+    downInfo.el.style.opacity='0.25';
+    sel=null;
+    downInfo.el.classList.remove('sel');
+  }
+  if(downInfo.moved){
+    ghostTargetX=e.clientX-downInfo.offX;
+    ghostTargetY=e.clientY-downInfo.offY;
+    if(!rafId)rafId=requestAnimationFrame(updateGhostPos);
+  }
+}
+
+function onPointerUp(e){
+  if(!downInfo)return;
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  const el=e.currentTarget;
+  el.removeEventListener('pointermove',onPointerMove);
+  el.removeEventListener('pointerup',onPointerUp);
+  el.removeEventListener('pointercancel',onPointerUp);
+  ghost.style.display='none';
+  downInfo.el.style.opacity='';
+
+  if(downInfo.moved){
+    const ok=handleDrop(e.clientX,e.clientY,downInfo.src,downInfo.col,downInfo.cnt,downInfo.cards);
+    if(!ok){sel=null;render();}
+  } else if(downInfo.isWasteTop){
+    autoMoveWaste();
+  } else {
+    handleTabTap(downInfo.col,downInfo.cnt,downInfo.cards);
+  }
+  downInfo=null;
+}
+
+function handleDrop(x,y,src,col,cnt,cards){
+  for(let i=0;i<4;i++){
+    const r=document.getElementById('f'+i).getBoundingClientRect();
+    if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom){return moveToFound(cards,src,col,cnt);}
+  }
+  for(const w of document.querySelectorAll('.tcol')){
+    const r=w.getBoundingClientRect();
+    if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom){
+      return moveToTab(cards,src,col,cnt,parseInt(w.dataset.col));
+    }
+  }
+  return false;
+}
+
+function handleTabTap(col,cnt,cards){
+  if(sel){
+    if(sel.col===col&&sel.cnt===cnt){sel=null;render();return;}
+    if(moveToTab(sel.cards,'tab',sel.col,sel.cnt,col)){sel=null;return;}
+    sel={col,cnt,cards};render();return;
+  }
+  sel={col,cnt,cards};render();
+}
+
+// Foundation + empty col clicks with selection
+for(let i=0;i<4;i++){
+  document.getElementById('f'+i).addEventListener('click',()=>{
+    if(!sel)return;
+    if(moveToFound(sel.cards,'tab',sel.col,sel.cnt))sel=null;
+  });
+}
+document.getElementById('tableau').addEventListener('click',e=>{
+  const em=e.target.closest('[data-empty-col]');
+  if(!em||!sel)return;
+  if(moveToTab(sel.cards,'tab',sel.col,sel.cnt,parseInt(em.dataset.emptyCol)))sel=null;
+});
+
+// ── Stock — draw 3 ────────────────────────────────────
+document.getElementById('stock-slot').addEventListener('click',()=>{
+  pushHist();
+  if(stock.length===0){
+    if(!waste.length)return;
+    stock=[...waste].reverse().map(c=>({...c,faceUp:false}));
+    waste=[];score=Math.max(0,score-100);
+  } else {
+    const n=Math.min(3,stock.length);
+    for(let i=0;i<n;i++){const c=stock.pop();c.faceUp=true;waste.push(c);}
+  }
+  moveCount++;sel=null;updateStats();render();
+});
+
+// ── Undo / New ────────────────────────────────────────
+document.getElementById('undo-btn').addEventListener('click',()=>{
+  if(!hist.length)return;restore(hist.pop());sel=null;updateStats();render();
+});
+document.getElementById('new-btn').addEventListener('click',()=>{
+  if(confirm('¿Empezar nueva partida?'))newGame();
+});
+
+// ── About popup ───────────────────────────────────────
+document.getElementById('about-btn').addEventListener('click',()=>{
+  document.getElementById('about-overlay').classList.add('on');
+});
+document.getElementById('about-close').addEventListener('click',()=>{
+  document.getElementById('about-overlay').classList.remove('on');
+});
+document.getElementById('about-overlay').addEventListener('click',e=>{
+  if(e.target===e.currentTarget)e.currentTarget.classList.remove('on');
+});
+
+// ── Win ───────────────────────────────────────────────
+function checkWin(){
+  if(found.reduce((s,f)=>s+f.length,0)!==52)return;
+  won=true;clearInterval(timerID);
+  const t=((Date.now()-startTime)/1000)|0;
+  document.getElementById('win-info').textContent=
+    `Puntuación: ${score}  •  Movimientos: ${moveCount}  •  Tiempo: ${(t/60)|0}:${(t%60).toString().padStart(2,'0')}`;
+  document.getElementById('win-overlay').classList.add('on');
+  launchConfetti();
+}
+function launchConfetti(){
+  const cols=['#FFD700','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7','#DDA0DD','#FF9F43'];
+  for(let i=0;i<80;i++)setTimeout(()=>{
+    const el=document.createElement('div');el.className='cf';
+    el.style.left=Math.random()*100+'vw';el.style.top='-12px';
+    el.style.background=cols[(Math.random()*cols.length)|0];
+    const dur=2+Math.random()*2.5;el.style.animationDuration=dur+'s';
+    el.style.width=el.style.height=(5+Math.random()*9)+'px';
+    document.body.appendChild(el);setTimeout(()=>el.remove(),dur*1000+200);
+  },Math.random()*2500);
+}
+
+// ── Responsive card sizing ────────────────────────────
+function calcSizes(){
+  const gameW=Math.min(window.innerWidth,540);
+  const pad=7,gap=Math.max(4,Math.round(gameW*0.016));
+  const cw=Math.floor((gameW-2*pad-6*gap)/7);
+  const ch=Math.floor(cw*1.42);
+  const pd=Math.max(12,Math.floor(ch*0.22));
+  const pu=Math.max(20,Math.floor(ch*0.40));
+  const fan=Math.min(18,Math.floor(cw*0.28));
+  const r=document.documentElement;
+  r.style.setProperty('--cw', cw+'px');
+  r.style.setProperty('--ch', ch+'px');
+  r.style.setProperty('--gap',gap+'px');
+  r.style.setProperty('--pd', pd+'px');
+  r.style.setProperty('--pu', pu+'px');
+  r.style.setProperty('--fan',fan+'px');
+}
+window.addEventListener('resize',()=>{calcSizes();if(!won)render();});
+calcSizes();
+newGame();
+</script>
+</body>
+</html>
